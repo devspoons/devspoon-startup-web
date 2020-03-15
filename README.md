@@ -1,7 +1,7 @@
 # devspoon-startup-web-php
-> [nginx-vhost-php7.3] 에서 제공하는 솔루션에 OpenProject, Jenkins를 결합한 솔루션
+> [devspoon-web-php] 에서 제공하는 솔루션에 OpenProject, Jenkins를 결합한 솔루션
 
-> 함께 제공되는 nginx/php7.3 가상 호스팅 운영 방법은 [nginx-vhost-php7.3] 에서 확인
+> 함께 제공되는 nginx/php7.3 가상 호스팅 운영 방법은 [devspoon-web-php] 에서 확인
 
 > 가상 호스팅, openproject, jenkins 모든 서비스를  도메인을 통해 단일 nginx 서버로 운영하고자 한다면
   compose/full_service 폴더의 docker-compose.yml을 사용
@@ -182,6 +182,6 @@ docker-compose up -d 실행
 
 <!-- Markdown link & img dfn's -->
 [docker-install]: https://hcnam.tistory.com/25 
-[nginx-vhost-php7.3]: https://github.com/bluebamus/nginx-vhost-php7.3
+[devspoon-web-php]: https://github.com/devspoons/devspoon-web-php
 [OpenProject]: http://wiki.webnori.com/display/pms/Open+Project+7
 [Jenkins]: https://jjeongil.tistory.com/810
