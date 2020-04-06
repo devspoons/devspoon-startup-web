@@ -14,5 +14,8 @@ compose/
 # nginx sites-available #
 config/site-available/
 
+# nginx cache #
+nginx_cache/
+
 # ssl files
 ssl/
