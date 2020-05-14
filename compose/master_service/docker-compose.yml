@@ -12,8 +12,7 @@ services:
       - ../../config/web-server/nginx/php/fastcgi/fastcgi_params:/etc/nginx/fastcgi_params
       - ../../nginx_cache/:/etc/nginx/cache/
       - ../../ssl/letsencrypt/:/etc/letsencrypt/
-      - ../../ssl/ssl/:/etc/ssl/
-      - ../../ssl/nginx/:/etc/nginx/ssl/
+      - ../../ssl/ssl/:/etc/ssl/      
       - ../../log/nginx/:/log/nginx/
     ports:
       - "80:80"
@@ -36,6 +35,19 @@ services:
     environment:
       TZ: "Asia/Seoul"
     restart: always
+    
+  gunicorn-app:
+    build: ../../../docker/gunicorn/
+    working_dir: /application
+    container_name: gunicorn-app
+    privileged: true
+    volumes:
+        - ../../../www:/www
+        - ../../../log:/log        
+        - /sys/fs/cgroup:/sys/fs/cgroup:ro    
+    environment:
+      TZ: "Asia/Seoul"
+    restart: always    
 
   openproject:
     image: openproject/community:latest
