@@ -1,187 +1,220 @@
-# devspoon-startup-web-php
-> [devspoon-web-php] 에서 제공하는 솔루션에 OpenProject, Jenkins를 결합한 솔루션
+# devspoon-startup-web
+[devspoon-web] is an open source that can easily build web servers based on php, gunicorn, and uwsgi.
+devspoon-startup-web is an open source made based on [devspoon-web] that can easily build project integration management solutions (openproject, jenkins, gitolite[private git server], harbor[private docker server]) required for start-up or development teams as well as php and python based web servers.
 
-> 함께 제공되는 nginx/php7.3 가상 호스팅 운영 방법은 [devspoon-web-php] 에서 확인
+* You can check how to build nginx web server and php/gunicorn/uwsgi application server at [devspoon-web].
 
-> 가상 호스팅, openproject, jenkins 모든 서비스를  도메인을 통해 단일 nginx 서버로 운영하고자 한다면
-  compose/full_service 폴더의 docker-compose.yml을 사용
+[devspoon-web]은 php, gunicorn, uwsgi 기반의 웹 서버를 쉽게 구축할 수 있는 오픈소스 입니다.
+devspoon-startup-web은 [devspoon-web] 기반으로 만들어져 php, python 기반의 웹서버 뿐만 아니라 스타트업 혹은 개발팀에 요구되는 프로젝트 통합 관리 솔루션(openproject, jenkins, gitolite[private git server], harbor[private docker server])들을 docker를 이용해 쉽게 구축할 수 있는 오픈소스 입니다.
 
-## 서비스 특징
- 
-> [OpenProject] : 프로젝트 관리 프로세스(PMI)를 지원 하는 오픈 소스 프로젝트 관리 소프트웨어
+* nginx 웹 서버 및 php/gunicorn/uwsgi 어플리케이션 서버 구축 방법은 [devspoon-web]에서 확인하실 수 있습니다.
 
-> [Jenkins] : CI 툴 중 하나로 CI (Continuous Integration)는 개발자가 공유 버전 제어 저장소에서 
-  팀의 코드를 컴파일 할 수 있도록함으로써 빌드주기 비 효율성을 줄이기 위한 프로세스
+## Project management solutions
 
-> nginx/php7.3 기반의 가상 호스팅, OpenProject, Jenkins를 개별 서버로 사용할 수 있고 
-  단일 nginx에 통합하여 사용할 수 있음
+* **[OpenProject] :** Open source project management software to help you work on your project efficiently
 
-> 예) test.com 도메인을 통해 a.test.com/ b.test/com 으로 가상 호스팅을 운영하고 
-      open.test.com으로 오픈프로젝트를 운영,
-      jen.test.com으로 jenkins를 운영할 수 있음
+* **[Jenkins] :** As one of the CI tools, CI (Continuous Integration) refers to continuous integration, which is an automated process for developers, and new code changes are automatically built and tested regularly to notify developers to solve problems that can occur when multiple developers develop simultaneously. Software that helps secure development stability and reliability
 
-## 사용 방법 (OpenProject) : 도메인 적용
+* **[Gitolite] :** Configuration Management Tool. user can install git server software at own server
 
-1. OpenProject 사용시 이벤트를 메일로 보내기 위해 메일 계정 정보를 필수로 요구함
+* **[Harbor] :** The Private Docker Registry Server for businesses that store and distribute Docker Images
 
-```
-본인은 mailgun을 사용함
+* **[OpenProject(KR)] :** 프로젝트를 효율적으로 진행할 수 있도록 지원하는 오픈 소스 프로젝트 관리 소프트웨어
 
-compose/nginx_openproject 폴더의 docker-compose.yml 파일에 다음과 같은 항목이 있으며  
-주석에 맞게 정보를 변경해야 함
+* **[Jenkins(KR)] :** CI 툴 중 하나로 CI (Continuous Integration)는 개발자를 위한 자동화 프로세스인 지속적인 통합을 말하며 새로운 코드 변경 사항들이 정기적으로 자동 빌드 및 테스트되어 개발자에게 알려줌으로 여러명의 개발자가 동시에 개발하며 발생할 수 있는 문제들을 해결하여 개발의 안정성 및 신뢰성을 확보할 수 있도록 지원하는 소프트웨어
 
-environment:
-      EMAIL_DELIVERY_METHOD: smtp
-      SMTP_ADDRESS: smtp.mailgun.org #해당 위치 정보 입력 mailgun 사용시 동일하게 유지
-      SMTP_PORT: 587
-      SMTP_DOMAIN: "test.com" #해당 위치 정보 입력
-      SMTP_AUTHENTICATION: login
-      SMTP_ENABLE_STARTTLS_AUTO: "true"
-      SMTP_USER_NAME: "test@test.com" #계정 정보
-      SMTP_PASSWORD: "1234567890067655abcdefgh" #key 정보
-```
+* **[Gitolite] :** 형상 관리 도구 혹은 버전관리 시스템으로 자체적으로 설치하고 운영할 수 있는 git 소프트웨어
 
-2. log의 supervisor 폴더가 volumes 로 연동되어있어 log 파일을 실시간 확인 가능
+* **[Harbor(KR)] :**  Docker Image를 저장하고 분배하는 기업용 Private Docker Registry Server
 
-3. config 폴더의 nginx_proxy_conf.sh 파일을 사용하여 nginx의 proxy 연결을 위한 conf 파일 생성
+## Features
 
-```sh
+* **Supports creation of configuration files required for each service:** Environment files and security keys used for each service are created according to the user's keyboard input using a shell script or automatically generated.
 
-account : 식별할 수 있는 파일명, 로그 파일명
-domain : 연결할 도메인 명
-portnumber : 웹 서비스 포트
-realurl : 프록시로 연결될 주소 및 포트 정보
+* **User custom installation support :** You can selectively install only the desired solution at compose/project_mng_service/(solution) without having to install all the solutions.
+  * If you want to install more than one solution at the same time, just uncomment what you want at compose/master_service/docker-compose.yml.
 
-#!/bin/bash
+* **Access web server and project management solutions with one nginx through nginx proxy  :** All solutions are available on one nginx server.
+     
+  * You can use ssh for direct access to gitolite.
+  * The harbor will be supported in a future version due to security issues, and you can connect to your own server through harbor.yml.
+    ```
+    Example 
 
-account=$1
-domain=$2
-portnumber=$3
-realurl='http:\/\/'$4':'$5
-
-sed 's/realurl;/'$realurl';/' sample_nginx_proxy.conf > $account'1'.temp
-sed 's/portnumber;/'$portnumber';/' $account'1'.temp > $account'2'.temp
-sed 's/domain/'$domain'/g' $account'2'.temp > ./conf.d/$account'_proxy_ng'.conf 
-
-rm *.temp
-```
-
-```sh
-사용 예시 
-nginx_proxy_conf.sh '파일명 & 로그파일명' '도메인' '웹 서비스 포트' 'docker 컨테이너 이름' 'docker 컨테이너 서비스 포트'
-예시) nginx_proxy_conf.sh open_test open.test.com 80 jenkins 8080
-
-결과물 
-open_test_proxy_ng.conf
-```
-
-3. 방화벽 설정
-
-```sh
-ufw를 사용하고 있는 경우 80과 443 포트를 열어줌
-예) ufw allow 80/tcp
-    ufw allow 443/tcp
-```
-
-4. Docker-compose 실행
-
-```sh
-compose/nginx_openproject 폴더 위치로 이동하여 docker-compose.yml 파일이 있는 곳에서
-docker-compose up -d 실행
-```
-
-## 사용 방법 (Jenkins) 1 : ip 접근
-
-```sh
-compose/nginx_jenkins 폴더에서 docker-compose up -d 실행
-
-ip:8100 으로 접근 가능
-
-* 방화벽 수정 : 예) ufw allow 8100/tcp
-
-```
-
-## 사용 방법 (Jenkins) 2 : 도메인 접근
-
-1. config 폴더의 nginx_proxy_conf.sh 파일을 사용하여 nginx의 proxy 연결을 위한 conf 파일 생성
-
-```sh
-
-account : 식별할 수 있는 파일명, 로그 파일명
-domain : 연결할 도메인 명
-portnumber : 웹 서비스 포트
-realurl : 프록시로 연결될 주소 및 포트 정보
-
-#!/bin/bash
-
-account=$1
-domain=$2
-portnumber=$3
-realurl='http:\/\/'$4':'$5
-
-sed 's/realurl;/'$realurl';/' sample_nginx_proxy.conf > $account'1'.temp
-sed 's/portnumber;/'$portnumber';/' $account'1'.temp > $account'2'.temp
-sed 's/domain/'$domain'/g' $account'2'.temp > ./conf.d/$account'_proxy_ng'.conf 
-
-rm *.temp
-```
-
-```sh
-사용 예시 
-nginx_proxy_conf.sh '파일명 & 로그파일명' '도메인' '웹 서비스 포트' 'docker 컨테이너 이름' 'docker 컨테이너 서비스 포트'
-예시) nginx_proxy_conf.sh open_test open.test.com 80 jenkins 8080
-
-결과물 
-open_test_proxy_ng.conf
-```
-
-3. 방화벽 설정
-
-```sh
-ufw를 사용하고 있는 경우 80과 443 포트를 열어줌
-예) ufw allow 80/tcp
-    ufw allow 443/tcp
-```
-
-4. Docker-compose 실행
-
-```sh
-compose/nginx_openproject 폴더 위치로 이동하여 docker-compose.yml 파일이 있는 곳에서
-docker-compose up -d 실행
-```
+    test.com -> company website
+    blog.test.com -> blog website
+    shop.test/com -> shopping mall website
+    open.test.com -> openproject solution
+    jen.test.com -> jenkins solution
+    ```
 
 
-## 사용 예제
+* **각 서비스들에 필요한 환경설정 파일 생성 지원 :** 각 서비스들에 사용되는 환경파일 및 보안키 등을 쉘 스크립트를 이용해 사용자의 키보드 입력에 맞춰 생성하거나 자동으로 생성합니다.
 
-스크린 샷과 코드 예제를 통해 사용 방법을 자세히 설명합니다.
-- 업데이트 예정
+* **사용자 맞춤식 설치 지원 :** 모든 솔루션을 설치할 필요 없이 compose/project_mng_service/(solution)에서 원하는 솔루션만 선택적으로 설치할 수 있습니다.
+  * 두개 이상의 솔루션을 동시에 설치하고 싶다면 compose/master_service/docker-compose.yml에서 원하는 항목만 주석 제거하면 됩니다.
 
-## 개발 환경 설정
+* **nginx의 proxy를 통해 하나의 nginx로 웹서버 및 프로젝트 관리 솔루션들에 접근 가능  :** 하나의 nginx 서버에서 모든 솔루션을 이용할 수 있습니다.
+     
+  * gitolite는 ssh로 직접 접근하여 사용하면 됩니다.
+  * harbor는 보안문제로 차후 버전에서 지원할 예정이며 harbor.yml을 통해 자체 서버로 연결 가능합니다.
+    ```
+    Example 
 
-만약 Docker 설치와 Docker-compose 설치가 되어 있지 않다면 다음 사항을 확인함
+    test.com -> company website
+    blog.test.com -> blog website
+    shop.test/com -> shopping mall website
+    open.test.com -> openproject solution
+    jen.test.com -> jenkins solution
+    ```
 
-> docker 설치 참고 사이트 [docker-install]  
-> docker-compose는 apt-get을 통해 설치가 가능한 것으로 확인됨
+## considerations
 
-## 업데이트 내역
+* **Development-oriented docker service** : This open source is designed for focused on development-oriented rather than perfect docker container distribution and is suitable for startups or new service development teams with frequent initial modifications and tests.
 
-* 0.1.0 : 안정화 버전 완료  
+* **Orchestration not supported** : In the future, we plan to interoperate with cloud services such as AWS and GCM
 
-* 차후 업데이트 계획 :   
-  - OpenObject와 젠킨스의 DB를 docker-compose.yml의 volumes 설정으로 컨테이너의 문제 발생시 데이터 복구 방안 제공
-  - OpenObject와 젠킨스의 DB를 외부에서 운영할 수 있도록 기존 docker 설정 업데이트 
- 
-## 신규 repository 계획
- - git-server, docker-image의 독립 서버들을 결합하여 신규 repository로 제공 예정  
- - 독립서버, aws, gcp 기반에 대한 각각의 쿠버네티스 기능을 탑제하여 신규 repository로 제공 예정  
+* **this open-source considers generic servers that are not support AWS, GCM** : This open source is intended to be installed and operated on a server that is directly operated, and on general server hosting, and plans to integrate with cloud services such as AWS and GCM in the future
+  
+* **개발 중심적 docker 서비스** : 이 오픈소스는 완전한 docker container의 배포가 아닌 개발 중심적으로 설계되었으며 초기 수정과 테스트가 빈번한 스타트업 혹은 신규 서비스 개발팀에게 적합합니다.
+  
+* **오케스트레이션 미지원** : 앞으로 AWS, GCM 등의 Cloud 서비스와 연동할 계획이며 이후 오캐스트레이션이 지원될 예정입니다.
+  
+* **AWS, GCM 기반이 아닌 일반 서버 고려** : 이 오픈소스는 직접 운용하고있는 서버, 일반적인 서버 호스팅에서 설치하여 운영하는 것을 목적으로 하고 있으며 앞으로 단계적으로 AWS, GCM 등의 Cloud 서비스와 연동할 계획입니다.
+
+## Install & Run
+### OpenProject 
+
+1. When using OpenProject, e-mail account information is required to send events by e-mail
+
+  * [mailgun] service setting
+    * It is recommended to use [sendgrid] as the rate policy change
+    ```
+    Information on the following items should be updated by referring to the comments in the docker-compose.yml file in the compose/project_mng_service/nginx_openproject folder
+
+    environment:
+          EMAIL_DELIVERY_METHOD: smtp
+          SMTP_ADDRESS: smtp.mailgun.org #Need to change when using other services than mailgun
+          SMTP_PORT: 587 #Need to change when using other services than mailgun
+          SMTP_DOMAIN: "test.com" #user's SMTP domain information
+          SMTP_AUTHENTICATION: login
+          SMTP_ENABLE_STARTTLS_AUTO: "true"
+          SMTP_USER_NAME: "test@test.com" #Service account information
+          SMTP_PASSWORD: "1234567890067655abcdefgh" #Service authentication key information
+    ```
+
+2. Run nginx_proxy_conf.sh file in config/web-server/(web server type) and enter service port number, domain, proxy url(Openproject's application name in docker-compose.yml), proxy port number, filename, and than, it make a nginx conf file in conf.d folder
+
+3. Run docker-compose.yml (single mode)
+    ```
+    get move to compose/project_mng_service/nginx_openproject
+    Execute docker-compose.yml using "docker-compose up -d" command
+    ```
+
+4. There are advanced information in [OpenProject Official User Documentation](https://docs.openproject.org/installation-and-operations/operation/backing-up/)
+
+***
+### Jenkins
+1. Run nginx_proxy_conf.sh file in config/web-server/(web server type) and enter service port number, domain, proxy url(Openproject's application name in docker-compose.yml), proxy port number, filename, and than, it make a nginx conf file in conf.d folder
+
+2. Run docker-compose.yml (single mode)
+    ```
+    get move to compose/project_mng_service/nginx_jenkins
+    Execute docker-compose.yml using "docker-compose up -d" command
+    ```
+
+3. There are advanced information in [Jenkins Official User Documentation](https://www.jenkins.io/doc/)
+
+***
+### Gitolite
+1. This docker make 2 account as gitolite-creator and git-manager. gitolite install at gitolite-creator and git-manager will manage gitolite system such as add new user or make new repogitory etc
+
+2. For management add new user account or make new repository, administrator must be accessed gitolite server by git-manager account. So, User must make client_user.pub key in docker/gitolite/system folder. Dockerfile will add this key at authorized_keys in git-manager account
+
+3. Run docker-compose.yml (single mode)
+    ```
+    get move to compose/project_mng_service/gitolite
+    current ssh port number is 2222. if user want to change the ssh port number, modify in docker-compose.yml
+    Execute docker-compose.yml using "docker-compose up -d" command
+    ```
+
+4. There are sample code 
+   * /home/git-manager/sample-script in the container
+    ```
+    clone_admin.sh -> clone admin repository to manage gitolite system. administrator must manage gitolite system though only git-manager account 
+    add_user.sh -> it show how to add new user in gitolite
+    ```
+
+5. There are advanced information in [Gitolite Cookbook](https://gitolite.com/gitolite/cookbook)
+
+***
+### Harbor
+1. To use harbor, it require latest docker-compose package. run /compose/project_mng_service/harbor-v.2.0.0/update_docker-compose.sh. if user already have latest version than 1.26.0, don't need this step
+
+2. harbor require a configuration file such as harbor.yml. update_harbor_config.sh file make harbor.yml. and then  run install.sh, harbor will install successfully
+
+3. If user want to install harbor by one step, user can use autoinstall.sh file. it is process to make harbor.yml and run install.sh. 
+
+4. If user want to use https, have to make ssl key in /compose/project_mng_service/harbor-v.2.0.0/ssl/ before runing install.sh or autoinstall.sh.
+
+5. If user want to make ssl key, refer "Setting up HTTPS on a web server" section. there are at bottom in this page
+
+6. There are advanced information in [Harbor 2.0 Documentation](https://goharbor.io/docs/2.0.0/)
+
+## Setting up HTTPS on a web server
+* This step requires running http nginx server. it recommend php nginx server for this step. if user need to informations for this, refer to [devspoon-web]
+
+    ```
+    1. There are letsencrypt.sh shell script file in script folder and it interlocked by volumes.
+    so user can access script file in a nginx container.
+
+    2. use "docker exec -it <nginx container name> bash" command, user can get docker inside.
     
+    3. run letsencrypt.sh and insert informations such as webroot, domain, e-mail etc.
+        this script make ssl-key and make crontab schedule automatically
 
-## 멤버
+    4. using "exit" command user can get off from container
+    
+    5. Run nginx_proxy_https_conf.sh file in config/web-server/(web server type) and enter service port number, domain, proxy url(Openproject's application name in docker-compose.yml), proxy port number, filename, and than, it make a nginx conf file in conf.d folder
 
-임도현 Owner S/W, H/W, 개발자/기획자, bluebamus@gmail.com
+    6. user have to remove http conf file in config/web-server/<service>/conf.d/
+
+    7. run "docker-compose up" command in the compose folder
+    ```
+
+## Additional development item
+
+* System integration between jenkins, gitolite, openproject.
+* Support docker-swarm, kubernetes
+* docker and orchestration monitoring system
+* backup and security system
+* Support cloud such as AWS, GCM etc
+
+## Community
+
+* **Personal Website :** Owner's personam website is [devspoon.com]
+* **Github.io :** Ther are more detail guide [devspoon.github.io]
+
+## Demos
+
+* **[youtube]** - Preparing
+* **[inflearn]** - Demos for Devspoon features and how to use the devspoon's open-source
+
+## Partners and Users
+
+Lim Do-Hyun Owner Developer/project Manager, bluebamus@gmail.com
+
+임도현 Owner 개발자/기획자, bluebamus@gmail.com
+
 
 <!-- Markdown link & img dfn's -->
-[docker-install]: https://hcnam.tistory.com/25 
-[devspoon-web-php]: https://github.com/devspoons/devspoon-web-php
-[OpenProject]: http://wiki.webnori.com/display/pms/Open+Project+7
-[Jenkins]: https://jjeongil.tistory.com/810
+[devspoon-web]: https://github.com/devspoons/devspoon-web
+[OpenProject(KR)]: http://wiki.webnori.com/display/pms/Open+Project+7
+[Jenkins(KR)]: https://jjeongil.tistory.com/810
+[Harbor(KR)]: https://engineering.linecorp.com/ko/blog/harbor-for-private-docker-registry/
+[mailgun]: https://www.mailgun.com/
+[sendgrid]: https://sendgrid.com/
+[OpenProject]: https://docs.openproject.org/user-guide/wiki/
+[Jenkins]: https://en.wikipedia.org/wiki/Jenkins_(software)
+[Gitolite]: https://wiki.archlinux.org/index.php/Gitolite
+[Harbor]: https://en.wikipedia.org/wiki/Harbor
