@@ -1,10 +1,10 @@
 # devspoon-startup-web
-[devspoon-web] is an open source that can easily build web servers based on php, gunicorn, and uwsgi.
+[devspoon-web] is an open source that can easily build web servers based on php, gunicorn, and uwsgi.  
 devspoon-startup-web is an open source made based on [devspoon-web] that can easily build project integration management solutions (openproject, jenkins, gitolite[private git server], harbor[private docker server]) required for start-up or development teams as well as php and python based web servers.
 
 * You can check how to build nginx web server and php/gunicorn/uwsgi application server at [devspoon-web].
 
-[devspoon-web]은 php, gunicorn, uwsgi 기반의 웹 서버를 쉽게 구축할 수 있는 오픈소스 입니다.
+[devspoon-web]은 php, gunicorn, uwsgi 기반의 웹 서버를 쉽게 구축할 수 있는 오픈소스 입니다.  
 devspoon-startup-web은 [devspoon-web] 기반으로 만들어져 php, python 기반의 웹서버 뿐만 아니라 스타트업 혹은 개발팀에 요구되는 프로젝트 통합 관리 솔루션(openproject, jenkins, gitolite[private git server], harbor[private docker server])들을 docker를 이용해 쉽게 구축할 수 있는 오픈소스 입니다.
 
 * nginx 웹 서버 및 php/gunicorn/uwsgi 어플리케이션 서버 구축 방법은 [devspoon-web]에서 확인하실 수 있습니다.
@@ -202,9 +202,11 @@ devspoon-startup-web은 [devspoon-web] 기반으로 만들어져 php, python 기
 
 ## Partners and Users
 
-Lim Do-Hyun Owner Developer/project Manager, bluebamus@gmail.com
+* Lim Do-Hyun Owner Developer/project Manager, bluebamus@gmail.com  
+Personal github.io : [bluebamus.github.io]
 
-임도현 Owner 개발자/기획자, bluebamus@gmail.com
+* 임도현 Owner 개발자/기획자, bluebamus@gmail.com  
+개인 github.io 사이트 : [bluebamus.github.io]
 
 
 <!-- Markdown link & img dfn's -->
@@ -218,3 +220,4 @@ Lim Do-Hyun Owner Developer/project Manager, bluebamus@gmail.com
 [Jenkins]: https://en.wikipedia.org/wiki/Jenkins_(software)
 [Gitolite]: https://wiki.archlinux.org/index.php/Gitolite
 [Harbor]: https://en.wikipedia.org/wiki/Harbor
+[bluebamus.github.io]: bluebamus.github.io
