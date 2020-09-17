@@ -2,8 +2,8 @@
 
 while :
 do 
+    echo "* if your webroot has sub-level, you should be insert as \\\/A\\\/B\\\/C"
     echo -n "Enter the service web root >"
-    echo -n "* if your webroot has sub-level, you should be insert as \\\/A\\\/B\\\/C"
     read webroot
     echo  "Entered service web root: $webroot"
     if [[ "$webroot" != "" ]]; then
@@ -44,7 +44,7 @@ done
 echo "Enter the serviceport"
 echo -n "if you push enter with none, there are no port number >"
 read serviceport
-echo  "Entered proxy port: $serviceport"
+echo "Entered proxy port: $serviceport"
 
 while :
 do 
