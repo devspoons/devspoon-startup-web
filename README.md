@@ -1,14 +1,16 @@
 # devspoon-startup-web
 
-[devspoon-web] is an open source that can easily build web servers based on php, gunicorn, and uwsgi.  
-devspoon-startup-web is an open source made based on [devspoon-web] that can easily build project integration management solutions (openproject, jenkins, gitolite[private git server], harbor[private docker server]) required for start-up or development teams as well as php and python based web servers.
+devspoon-startup-web is an integrated management solution that allows you to easily build the solutions needed for startups (openproject, jenkins, gitolite [private git server], Harbor [private Docker server]).
+A single docker-compose can be used to install various development, backup, and management services singly, in groups, or collectively.
+This repository is based on the [devspoon-web](https://github.com/devspoons/devspoon-web) project. devspoon-web is an open source that allows you to easily build a web or API based on php, python, django, nginx, and redis using docker-compose.
 
-- You can check how to build nginx web server and php/gunicorn/uwsgi application server with cache of redis and redis-state at [devspoon-web].
+# introduce "Devspoon-Projects"
 
-[devspoon-web]은 php, gunicorn, uwsgi 기반의 웹 서버를 쉽게 구축할 수 있는 오픈소스 입니다.  
-devspoon-startup-web은 [devspoon-web] 기반으로 만들어져 php, python 기반의 웹서버 뿐만 아니라 스타트업 혹은 개발팀에 요구되는 프로젝트 통합 관리 솔루션(openproject, jenkins, gitolite[private git server], harbor[private docker server])들을 docker를 이용해 쉽게 구축할 수 있는 오픈소스 입니다.
+- We provide an open source infrastructure integration solution that can easily service Python, Django, PHP, etc. using docker-compose. You can install the commercial-level customizable nginx service and redis at once, and install and manage more services at once. If you are interested, please visit [Devspoon-Projects](https://github.com/devspoon/Devspoon-Projects).
 
-- nginx 웹 서버 및 php/gunicorn/uwsgi 어플리케이션 서버와 redis, redis-state 구축 방법은 [devspoon-web]에서 확인하실 수 있습니다.
+# Official guide document
+
+- preparing...
 
 ## Project management solutions
 
@@ -20,14 +22,6 @@ devspoon-startup-web은 [devspoon-web] 기반으로 만들어져 php, python 기
 
 - **[Harbor] :** The Private Docker Registry Server for businesses that store and distribute Docker Images
 
-- **[OpenProject(KR)] :** 프로젝트를 효율적으로 진행할 수 있도록 지원하는 오픈 소스 프로젝트 관리 소프트웨어
-
-- **[Jenkins(KR)] :** CI 툴 중 하나로 CI (Continuous Integration)는 개발자를 위한 자동화 프로세스인 지속적인 통합을 말하며 새로운 코드 변경 사항들이 정기적으로 자동 빌드 및 테스트되어 개발자에게 알려줌으로 여러명의 개발자가 동시에 개발하며 발생할 수 있는 문제들을 해결하여 개발의 안정성 및 신뢰성을 확보할 수 있도록 지원하는 소프트웨어
-
-- **[Gitolite] :** 형상 관리 도구 혹은 버전관리 시스템으로 자체적으로 설치하고 운영할 수 있는 git 소프트웨어
-
-- **[Harbor(KR)] :** Docker Image를 저장하고 분배하는 기업용 Private Docker Registry Server
-
 ## Features
 
 - **Supports creation of configuration files required for each service:** Environment files and security keys used for each service are created according to the user's keyboard input using a shell script or automatically generated.
@@ -38,50 +32,26 @@ devspoon-startup-web은 [devspoon-web] 기반으로 만들어져 php, python 기
 
 - **Access web server and project management solutions with one nginx through nginx proxy :** All solutions are available on one nginx server.
 
+  ```
+  Example
+
+  test.com -> company website
+  blog.test.com -> blog website
+  shop.test/com -> shopping mall website
+  open.test.com -> openproject solution
+  jen.test.com -> jenkins solution
+  ```
+
+- **etc :**
+
   - You can use ssh for direct access to gitolite.
   - The harbor will be supported in a future version due to security issues, and you can connect to your own server through harbor.yml.
 
-    ```
-    Example
-
-    test.com -> company website
-    blog.test.com -> blog website
-    shop.test/com -> shopping mall website
-    open.test.com -> openproject solution
-    jen.test.com -> jenkins solution
-    ```
-
-- **각 서비스들에 필요한 환경설정 파일 생성 지원 :** 각 서비스들에 사용되는 환경파일 및 보안키 등을 쉘 스크립트를 이용해 사용자의 키보드 입력에 맞춰 생성하거나 자동으로 생성합니다.
-
-- **사용자 맞춤식 설치 지원 :** 모든 솔루션을 설치할 필요 없이 compose/project_mng_service/(solution)에서 원하는 솔루션만 선택적으로 설치할 수 있습니다.
-
-  - 두개 이상의 솔루션을 동시에 설치하고 싶다면 compose/master_service/docker-compose.yml에서 원하는 항목만 주석 제거하면 됩니다.
-
-- **nginx의 proxy를 통해 하나의 nginx로 웹서버 및 프로젝트 관리 솔루션들에 접근 가능 :** 하나의 nginx 서버에서 모든 솔루션을 이용할 수 있습니다.
-
-  - gitolite는 ssh로 직접 접근하여 사용하면 됩니다.
-  - harbor는 보안문제로 차후 버전에서 지원할 예정이며 harbor.yml을 통해 자체 서버로 연결 가능합니다.
-
-    ```
-    Example
-
-    test.com -> company website
-    blog.test.com -> blog website
-    shop.test/com -> shopping mall website
-    open.test.com -> openproject solution
-    jen.test.com -> jenkins solution
-    ```
-
 ## considerations
 
-- **Development-oriented docker service** : This open source is designed for focused on development-oriented rather than perfect docker container distribution and is suitable for startups or new service development teams with frequent initial modifications and tests.
-
-- **Orchestration not supported** : In the future, we plan to interoperate with cloud services such as AWS and GCM
+- **Development-oriented docker service** : This open source is perfect for startups or new service development teams that require frequent modifications and testing.
 
 - **this open-source considers generic servers that are not support AWS, GCM** : This open source is intended to be installed and operated on a server that is directly operated, and on general server hosting, and plans to integrate with cloud services such as AWS and GCM in the future
-- **개발 중심적 docker 서비스** : 이 오픈소스는 완전한 docker container의 배포가 아닌 개발 중심적으로 설계되었으며 초기 수정과 테스트가 빈번한 스타트업 혹은 신규 서비스 개발팀에게 적합합니다.
-- **오케스트레이션 미지원** : 앞으로 AWS, GCM 등의 Cloud 서비스와 연동할 계획이며 이후 오캐스트레이션이 지원될 예정입니다.
-- **AWS, GCM 기반이 아닌 일반 서버 고려** : 이 오픈소스는 직접 운용하고있는 서버, 일반적인 서버 호스팅에서 설치하여 운영하는 것을 목적으로 하고 있으며 앞으로 단계적으로 AWS, GCM 등의 Cloud 서비스와 연동할 계획입니다.
 
 ## Install & Run
 
@@ -208,20 +178,12 @@ devspoon-startup-web은 [devspoon-web] 기반으로 만들어져 php, python 기
 
 ## Community
 
-- **Personal Website :** Owner's personam website is [devspoon.com]
-- **Github.io :** Ther are more detail guide [devspoon.github.io]
-
-## Demos
-
-- **[youtube]** - Preparing
+- **Personal Website :** Owner's personal website is [devspoon.com](devspoon.com)
 
 ## Partners and Users
 
 - Lim Do-Hyun Owner Developer/project Manager, bluebamus@gmail.com  
   Personal github.io : [bluebamus.github.io]
-
-- 임도현 Owner 개발자/기획자, bluebamus@gmail.com  
-  개인 github.io 사이트 : [bluebamus.github.io]
 
 <!-- Markdown link & img dfn's -->
 
