@@ -14,23 +14,23 @@ This repository is based on the [devspoon-web](https://github.com/devspoons/devs
 
 ## Project management solutions
 
-- **[OpenProject] :** Open source project management software to help you work on your project efficiently
+- **[OpenProject]** : Open source project management software to help you work on your project efficiently
 
-- **[Jenkins] :** As one of the CI tools, CI (Continuous Integration) refers to continuous integration, which is an automated process for developers, and new code changes are automatically built and tested regularly to notify developers to solve problems that can occur when multiple developers develop simultaneously. Software that helps secure development stability and reliability
+- **[Jenkins]** : As one of the CI tools, CI (Continuous Integration) refers to continuous integration, which is an automated process for developers, and new code changes are automatically built and tested regularly to notify developers to solve problems that can occur when multiple developers develop simultaneously. Software that helps secure development stability and reliability
 
-- **[Gitolite] :** Configuration Management Tool. user can install git server software at own server
+- **[Gitolite]** : Configuration Management Tool. user can install git server software at own server
 
-- **[Harbor] :** The Private Docker Registry Server for businesses that store and distribute Docker Images
+- **[Harbor]** : The Private Docker Registry Server for businesses that store and distribute Docker Images
 
 ## Features
 
-- **Supports creation of configuration files required for each service:** Environment files and security keys used for each service are created according to the user's keyboard input using a shell script or automatically generated.
+- **Supports creation of configuration files required for each service** : Environment files and security keys used for each service are created according to the user's keyboard input using a shell script or automatically generated.
 
-- **User custom installation support :** You can selectively install only the desired solution at compose/project_mng_service/(solution) without having to install all the solutions.
+- **User custom installation support** : You can selectively install only the desired solution at compose/project_mng_service/(solution) without having to install all the solutions.
 
   - If you want to install more than one solution at the same time, just uncomment what you want at compose/master_service/docker-compose.yml.
 
-- **Access web server and project management solutions with one nginx through nginx proxy :** All solutions are available on one nginx server.
+- **Access web server and project management solutions with one nginx through nginx proxy** : All solutions are available on one nginx server.
 
   ```
   Example
@@ -42,7 +42,7 @@ This repository is based on the [devspoon-web](https://github.com/devspoons/devs
   jen.test.com -> jenkins solution
   ```
 
-- **etc :**
+- **etc** :
 
   - You can use ssh for direct access to gitolite.
   - The harbor will be supported in a future version due to security issues, and you can connect to your own server through harbor.yml.
@@ -178,7 +178,7 @@ This repository is based on the [devspoon-web](https://github.com/devspoons/devs
 
 ## Community
 
-- **Personal Website :** Owner's personal website is [devspoon.com](devspoon.com)
+- **Personal Website** : Owner's personal website is [devspoon.com](devspoon.com)
 
 ## Partners and Users
 
