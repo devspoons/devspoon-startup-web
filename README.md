@@ -28,7 +28,15 @@ This repository is based on the [devspoon-web](https://github.com/devspoons/devs
 
 - **User custom installation support** : You can selectively install only the desired solution at compose/project_mng_service/(solution) without having to install all the solutions.
 
-  - If you want to install more than one solution at the same time, just uncomment what you want at compose/master_service/docker-compose.yml.
+  - To install more than one solution at the same time, use the docker-compose file located in the "compose/master_service/" folder.
+
+  - How to use: docker-compose -f docker-compose-php.yml up -d
+
+  - How to use (celery): docker-compose -f docker-compose-php.yml --profile celery up -d
+
+  - How to use (redis): docker-compose -f docker-compose-php.yml --profile redis up -d
+
+  - How to use (all): docker-compose -f docker-compose-php.yml --profile celery --profile redis up -d
 
 - **Access web server and project management solutions with one nginx through nginx proxy** : All solutions are available on one nginx server.
 
