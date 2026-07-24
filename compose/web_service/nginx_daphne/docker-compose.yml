@@ -40,8 +40,7 @@ services:
       - ../../../script/logrotate/daphne/daphne:/etc/logrotate.d/daphne
     command: |
       bash -c "
-        poetry config virtualenvs.create false &&
-        poetry install --no-root --without test &&
+        uv sync --inexact --extra daphne --extra celery &&
         export PYTHONUNBUFFERED=1 &&
         exec daphne -p 8000 -b 0.0.0.0 \
           --websocket_timeout 60 \
@@ -84,8 +83,7 @@ services:
       - ../../../www:/www
       - ../../../log:/log
       - ../../../script/logrotate/daphne/celery/daphne-celery:/etc/logrotate.d/daphne-celery
-    command: bash -c "poetry config virtualenvs.create false && \
-      poetry install --no-root && \
+    command: bash -c "uv sync --inexact --extra daphne --extra celery && \
       celery -A config worker \
       --loglevel=INFO \
       --logfile=/log/daphne/celery/worker-%n%I.log"
@@ -115,8 +113,7 @@ services:
       - ../../../www:/www
       - ../../../log:/log
       - ../../../script/logrotate/daphne/celerybeat/daphne-celerybeat:/etc/logrotate.d/daphne-celerybeat
-    command: bash -c "poetry config virtualenvs.create false && \
-      poetry install --no-root && \
+    command: bash -c "uv sync --inexact --extra daphne --extra celery && \
       celery -A config beat \
       --loglevel=INFO \
       --scheduler django_celery_beat.schedulers:DatabaseScheduler \
