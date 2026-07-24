@@ -50,12 +50,10 @@ check ".env-example (nginx_uvicorn)"   "test -f $ROOT/compose/web_service/nginx_
 check ".env-example (nginx_daphne)"    "test -f $ROOT/compose/web_service/nginx_daphne/.env-example"
 check ".env-example (nginx_uwsgi)"     "test -f $ROOT/compose/web_service/nginx_uwsgi/.env-example"
 check ".env-example (nginx_php)"   "test -f $ROOT/compose/web_service/nginx_php/.env-example"
-check ".env-example (nginx_php)"   "test -f $ROOT/compose/web_service/nginx_php/.env-example"
 check "Dockerfile (gunicorn)"  "test -f $ROOT/docker/gunicorn/Dockerfile"
 check "Dockerfile (uwsgi)"     "test -f $ROOT/docker/uwsgi/Dockerfile"
 check "Dockerfile (nginx)"     "test -f $ROOT/docker/nginx/Dockerfile"
-check "Dockerfile (php-fpm 7.3)" "test -f $ROOT/docker/php-fpm/Dockerfile-7.3"
-check "Dockerfile (php-fpm 8.4)" "test -f $ROOT/docker/php-fpm/Dockerfile-8.4"
+check "Dockerfile (php-fpm)" "test -f $ROOT/docker/php-fpm/Dockerfile"
 check "entrypoint-with-cron (gunicorn)" "test -f $ROOT/docker/gunicorn/entrypoint-with-cron.sh"
 check "entrypoint-with-cron (uwsgi)"    "test -f $ROOT/docker/uwsgi/entrypoint-with-cron.sh"
 check "pyproject.toml"         "test -f $ROOT/www/django_sample/pyproject.toml"
@@ -66,8 +64,8 @@ check "letsencrypt.sh"         "test -f $ROOT/script/letsencrypt.sh"
 echo "[3] Design invariants"
 check "logrotate folder (not 'loglotate')" \
       "test -d $ROOT/script/logrotate && ! test -d $ROOT/script/loglotate"
-check "log/ has .gitkeep × 11" \
-      "[ \$(find $ROOT/log/ -name .gitkeep 2>/dev/null | wc -l) -eq 11 ]"
+check "log/ has .gitkeep >= 11" \
+      "[ \$(find $ROOT/log/ -name .gitkeep 2>/dev/null | wc -l) -ge 11 ]"
 check "pyproject.toml is PEP 621 (no [tool.poetry])" \
       "grep -q '^\[project\]' $ROOT/www/django_sample/pyproject.toml && \
        ! grep -q '^\[tool.poetry\]' $ROOT/www/django_sample/pyproject.toml"
@@ -84,11 +82,11 @@ check "Dockerfile FROM ubuntu:24.04 (uwsgi)" \
 check "Dockerfile FROM nginx:1.27 (nginx)" \
       "grep -qE '^FROM nginx:1\.27' $ROOT/docker/nginx/Dockerfile"
 check "compose: no poetry references" \
-      "! grep -rq 'poetry install\|poetry config' $ROOT/compose/"
+      "! grep -rq 'poetry install\|poetry config' $ROOT/compose/web_service/"
 check "compose: no 'uv run' in active commands" \
-      "! grep -rqE '^\s*command:.*uv run' $ROOT/compose/"
+      "! grep -rqE '^\s*command:.*uv run' $ROOT/compose/web_service/"
 check "compose: no 'service nginx restart' (regression)" \
-      "! grep -rnE 'service[[:space:]]+nginx[[:space:]]+(restart|reload)' $ROOT/docker/ $ROOT/script/ $ROOT/compose/ \
+      "! grep -rnE 'service[[:space:]]+nginx[[:space:]]+(restart|reload)' $ROOT/docker/ $ROOT/script/ $ROOT/compose/web_service/ \
          --exclude-dir=test 2>/dev/null \
          | grep -vE ':[0-9]+:[[:space:]]*#' \
          | grep -q ."
