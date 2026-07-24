@@ -30,9 +30,8 @@ build_one() {
 build_one nginx        nginx
 build_one gunicorn     gunicorn
 build_one uwsgi        uwsgi
-# php-fpm context has no plain `Dockerfile` — two variants must be selected explicitly.
-build_one php-fpm-7.3  php-fpm  Dockerfile-7.3
-build_one php-fpm-8.4  php-fpm  Dockerfile-8.4
+# php-fpm: startup-web 은 단일 php-8.4 Dockerfile 만 사용(기본 Dockerfile).
+build_one php-fpm      php-fpm
 
 echo ""
 echo "===== build summary ====="
