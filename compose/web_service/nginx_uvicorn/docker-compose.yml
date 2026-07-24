@@ -24,6 +24,9 @@ services:
     environment:
       TZ: "Asia/Seoul"
     restart: always
+    depends_on:
+      uvicorn-app:
+        condition: service_healthy
 
   uvicorn-app:
     build: ../../../docker/gunicorn/
@@ -44,6 +47,12 @@ services:
     environment:
       TZ: "Asia/Seoul"
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8000' || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
 
   celery:
     build: ../../../docker/gunicorn/

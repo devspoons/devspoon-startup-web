@@ -24,6 +24,9 @@ services:
     environment:
       TZ: "Asia/Seoul"
     restart: always
+    depends_on:
+      php-app:
+        condition: service_healthy
 
   php-app:
     build: ../../../docker/php-fpm/
@@ -43,6 +46,12 @@ services:
     environment:
       TZ: "Asia/Seoul"
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000' || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
 
   redis:
     image: redis:latest
