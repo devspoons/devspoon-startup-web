@@ -113,7 +113,7 @@ docker compose --profile redis up -d     # + redis
 - **기동 순서 — app 이 DB 를 초기화한 뒤 celery · beat**: 각 스택의 app 서비스만 서버 기동 전에 `uv sync` 후 DB 를 1회 초기화합니다(`manage.py` 가 있으면 `python manage.py migrate --noinput`, 없으면 프로젝트의 `prestart.sh`). `celery` · `celery-beat` 는 `depends_on: <app>: condition: service_healthy` 라 app 이 healthy 가 된 뒤 기동합니다 — 동시 migrate 경쟁이 없습니다.
 - **Flower** 는 **`127.0.0.1:5555` 에만 바인드**됩니다. 원격 접근은 SSH 터널: `ssh -L 5555:127.0.0.1:5555 <host>` 후 로컬 브라우저에서 `http://127.0.0.1:5555`.
 - `DJANGO_DEBUG`(기본 `0`) · `DJANGO_ALLOWED_HOSTS` 를 `.env` 로 제어하며 app · celery · beat 에 전달됩니다. `DJANGO_DEBUG=1` 은 로컬 개발에서만 쓰세요.
-- 컨테이너는 `docker compose stop` / `start` / `restart` 로 운영합니다.
+- 컨테이너는 `docker compose stop` / `start` / `restart` 로 운영합니다. 프로필 서비스까지 대상이면 기동과 같은 프로필을 붙입니다(`docker compose --profile celery stop`, php 는 `--profile redis stop`) — 프로필 없는 `stop` 은 celery · celery-beat · flower(php 는 redis) 컨테이너를 남깁니다.
 
 ### 3. SQLite 데이터 위치 — named volume `/data`
 
@@ -129,7 +129,7 @@ docker compose exec gunicorn-app chown www-data:www-data /data/django_sample.sql
 docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 미적용 migrate 반영
 ```
 
-> ⚠️ **`docker compose down -v` 는 `app-data` 볼륨, 즉 SQLite DB 를 삭제합니다.** 컨테이너만 내리려면 `docker compose stop` 을 쓰세요 (`down` 은 비권장, 특히 `-v`). 백업: `docker compose cp gunicorn-app:/data/django_sample.sqlite3 ./backup.sqlite3`. master_service 의 gitolite 저장소 볼륨(`gitolite-repos`)도 `-v` 로 삭제됩니다.
+> ⚠️ **`docker compose down -v` 는 `app-data` 볼륨, 즉 SQLite DB 를 삭제합니다.** 컨테이너만 내리려면 `docker compose stop` 을 쓰세요 (`down` 은 비권장, 특히 `-v`; 프로필 서비스는 §2 처럼 `--profile` 을 붙임). 백업: `docker compose cp gunicorn-app:/data/django_sample.sqlite3 ./backup.sqlite3`. master_service 의 gitolite 저장소 볼륨(`gitolite-repos`)도 `-v` 로 삭제됩니다.
 
 ### 4. 이미지 이름 · 빌드 · uv
 
@@ -143,7 +143,7 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
   ```
 
   빠뜨리면 빌드가 `"/pyproject.toml": not found` 로 실패합니다.
-- **uv**: `www/django_sample` 의 의존성은 `pyproject.toml` · `uv.lock` 으로 관리합니다. 컨테이너는 가상환경 없이 시스템 Python 에 설치하며(`UV_PROJECT_ENVIRONMENT=/usr/local`), 기동 명령이 `uv sync --inexact --extra <stack> --extra celery` 를 실행합니다. 같은 스택의 app · celery · celery-beat 는 같은 extras 로 sync 합니다. 의존성 추가는 호스트에서 `cd www/django_sample && uv add <pkg>` 후 `uv.lock` 을 커밋하고 스택 폴더에서 `docker compose up -d --build` 로 재기동합니다(앱 이미지 사전 설치도 `uv.lock` 에서 도출).
+- **uv**: `www/django_sample` 의 의존성은 `pyproject.toml` · `uv.lock` 으로 관리합니다. 컨테이너는 가상환경 없이 시스템 Python 에 설치하며(`UV_PROJECT_ENVIRONMENT=/usr/local`), 기동 명령이 `uv sync --inexact --extra <stack> --extra celery` 를 실행합니다. 같은 스택의 app · celery · celery-beat 는 같은 extras 로 sync 합니다. 의존성 추가는 호스트에서 `cd www/django_sample && uv add <pkg>` 후 `uv.lock` 을 커밋하고 스택 폴더에서 `docker compose --profile celery stop && docker compose up -d --build` 로 재기동하고, celery 사용 시 `docker compose --profile celery up -d` 로 celery · celery-beat 도 다시 올립니다(앱 이미지 사전 설치도 `uv.lock` 에서 도출; celery 는 `build:` 없이 같은 이미지를 참조하므로 프로필 없는 `up --build` 만으로는 옛 이미지·옛 의존성으로 계속 동작).
 
 ### 5. nginx · php 설정
 
