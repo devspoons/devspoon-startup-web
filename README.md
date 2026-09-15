@@ -94,13 +94,19 @@ bash -c ". script/lib/django_secrets.sh && ensure_env_secrets $D/.env"
 
 ### 2. 기동
 
-```bash
-cd compose/web_service/nginx_gunicorn
-docker compose up -d                     # webserver + gunicorn-app + redis
-docker compose --profile celery up -d    # + celery · celery-beat · flower
+§1 의 `.env` 명령(저장소 루트) 뒤, 저장소 루트에서 스택 폴더로 이동해 기동합니다(`--build` 는 업그레이드나 Dockerfile / `uv.lock` 변경 뒤 이미지를 다시 빌드합니다). 한 호스트에 한 스택만 띄웁니다.
 
+```bash
+# gunicorn (저장소 루트에서)
+cd compose/web_service/nginx_gunicorn
+docker compose up -d --build             # webserver + gunicorn-app + redis
+docker compose --profile celery up -d    # + celery · celery-beat · flower
+```
+
+```bash
+# php (저장소 루트에서)
 cd compose/web_service/nginx_php
-docker compose up -d                     # webserver + php-app
+docker compose up -d --build             # webserver + php-app
 docker compose --profile redis up -d     # + redis
 ```
 
@@ -117,7 +123,7 @@ Python 스택(gunicorn · uvicorn · uwsgi · daphne)의 SQLite 는 호스트 `w
 
 ```bash
 cd compose/web_service/nginx_gunicorn
-docker compose up -d        # app-data 볼륨 생성 (빈 DB 로 migrate 됨)
+docker compose up -d --build  # app-data 볼륨 생성 (빈 DB 로 migrate 됨)
 docker compose cp ../../../www/django_sample/db.sqlite3 gunicorn-app:/data/django_sample.sqlite3
 docker compose exec gunicorn-app chown www-data:www-data /data/django_sample.sqlite3
 docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 미적용 migrate 반영
@@ -137,7 +143,7 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
   ```
 
   빠뜨리면 빌드가 `"/pyproject.toml": not found` 로 실패합니다.
-- **uv**: `www/django_sample` 의 의존성은 `pyproject.toml` · `uv.lock` 으로 관리합니다. 컨테이너는 가상환경 없이 시스템 Python 에 설치하며(`UV_PROJECT_ENVIRONMENT=/usr/local`), 기동 명령이 `uv sync --inexact --extra <stack> --extra celery` 를 실행합니다. 같은 스택의 app · celery · celery-beat 는 같은 extras 로 sync 합니다. 의존성 추가는 호스트에서 `cd www/django_sample && uv add <pkg>` 후 `uv.lock` 을 커밋하고 컨테이너를 재기동합니다.
+- **uv**: `www/django_sample` 의 의존성은 `pyproject.toml` · `uv.lock` 으로 관리합니다. 컨테이너는 가상환경 없이 시스템 Python 에 설치하며(`UV_PROJECT_ENVIRONMENT=/usr/local`), 기동 명령이 `uv sync --inexact --extra <stack> --extra celery` 를 실행합니다. 같은 스택의 app · celery · celery-beat 는 같은 extras 로 sync 합니다. 의존성 추가는 호스트에서 `cd www/django_sample && uv add <pkg>` 후 `uv.lock` 을 커밋하고 스택 폴더에서 `docker compose up -d --build` 로 재기동합니다(앱 이미지 사전 설치도 `uv.lock` 에서 도출).
 
 ### 5. nginx · php 설정
 
@@ -178,17 +184,18 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
 3. **proxy 샘플 복사** — webserver 가 `config/web-server/nginx/php/proxy/<svc>/` 를 `/etc/nginx/proxy.d/<svc>/` 로 읽기 전용 마운트하고, `nginx.conf` 가 `include /etc/nginx/proxy.d/*/*.conf;` 로 읽습니다. `conf.d` 로 복사하지 않습니다.
 
    ```bash
-   cd config/web-server/nginx/php/proxy/openproject && cp openproject_proxy.conf.example openproject_proxy.conf   # server_name 수정
-   cd ../jenkins && cp jenkins_proxy.conf.example jenkins_proxy.conf                                            # server_name 수정
+   P=config/web-server/nginx/php/proxy
+   cp "$P/openproject/openproject_proxy.conf.example" "$P/openproject/openproject_proxy.conf"   # server_name 수정
+   cp "$P/jenkins/jenkins_proxy.conf.example" "$P/jenkins/jenkins_proxy.conf"                   # server_name 수정
    ```
 
    복사본(`*_proxy.conf`, gitignore)이 없으면 주석뿐인 `default.conf` 만 읽혀 해당 proxy 가 비활성입니다. 샘플은 HTTP(80) 서버 블록만 있으므로 TLS 는 [HTTPS 절](#setting-up-https-on-a-web-server)로 443 블록을 추가합니다.
-4. **기동**
+4. **기동** — 저장소 루트에서 스택 폴더로 이동합니다(`--build` 는 업그레이드나 Dockerfile / `uv.lock` 변경 뒤 이미지를 다시 빌드합니다).
 
    ```bash
    cd compose/master_service
-   docker compose -f docker-compose-gunicorn.yml --profile celery up -d
-   docker compose -f docker-compose-php.yml --profile redis up -d      # php 조합
+   docker compose -f docker-compose-gunicorn.yml --profile celery up -d --build
+   docker compose -f docker-compose-php.yml --profile redis up -d --build      # php 조합
    ```
 
 ## project_mng_service — 단독 서비스
@@ -215,16 +222,16 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
 
    > ⚠️ **pgdata 업그레이드**: 이미지가 `openproject/openproject:17`(내장 PostgreSQL 17)입니다. 이전 버전(`openproject/community` 등)으로 만든 `pgdata/` 는 PostgreSQL 메이저 버전이 달라 그대로 기동할 수 없습니다. 기존 데이터가 있으면 먼저 백업하고 [OpenProject 공식 문서][OpenProject docs]의 업그레이드 절차를 따르세요.
 
-3. proxy 샘플 복사: `cd config/web-server/nginx/php/proxy/openproject && cp openproject_proxy.conf.example openproject_proxy.conf` 후 `server_name` 수정.
-4. 기동: `cd compose/project_mng_service/nginx_openproject && docker compose up -d` (HTTP 전용 — 위 규칙 참조).
+3. proxy 샘플 복사(저장소 루트): `P=config/web-server/nginx/php/proxy/openproject; cp "$P/openproject_proxy.conf.example" "$P/openproject_proxy.conf"` 후 `server_name` 수정.
+4. 기동(저장소 루트에서, `--build` 는 업그레이드나 Dockerfile 변경 뒤 nginx 이미지 재빌드): `cd compose/project_mng_service/nginx_openproject && docker compose up -d --build` (HTTP 전용 — 위 규칙 참조).
 
 ---
 
 ### Jenkins
 
-1. proxy 샘플 복사: `cd config/web-server/nginx/php/proxy/jenkins && cp jenkins_proxy.conf.example jenkins_proxy.conf` 후 `server_name` 수정.
-2. `.env` 생성: `D=compose/project_mng_service/nginx_jenkins; cp "$D/.env-example" "$D/.env"` (로그 설정만, 비밀값 없음).
-3. 기동: `cd compose/project_mng_service/nginx_jenkins && docker compose up -d` — 이미지 `jenkins/jenkins:lts-jdk21`, 데이터는 같은 폴더 `jenkins_home`(HTTP 전용 — 위 규칙 참조).
+1. proxy 샘플 복사(저장소 루트): `P=config/web-server/nginx/php/proxy/jenkins; cp "$P/jenkins_proxy.conf.example" "$P/jenkins_proxy.conf"` 후 `server_name` 수정.
+2. `.env` 생성(저장소 루트): `D=compose/project_mng_service/nginx_jenkins; cp "$D/.env-example" "$D/.env"` (로그 설정만, 비밀값 없음).
+3. 기동(저장소 루트에서, `--build` 는 업그레이드나 Dockerfile 변경 뒤 nginx 이미지 재빌드): `cd compose/project_mng_service/nginx_jenkins && docker compose up -d --build` — 이미지 `jenkins/jenkins:lts-jdk21`, 데이터는 같은 폴더 `jenkins_home`(HTTP 전용 — 위 규칙 참조).
 4. There are advanced information in [Jenkins Official User Documentation](https://www.jenkins.io/doc/)
 
 ---
@@ -235,8 +242,7 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
 
    ```bash
    ssh-keygen -t ed25519 -f ~/.ssh/gitolite_admin -C gitolite-admin   # 개인키는 호스트에만 보관
-   cd docker/gitolite/system
-   cp ~/.ssh/gitolite_admin.pub ./client_user.pub
+   cp ~/.ssh/gitolite_admin.pub docker/gitolite/system/client_user.pub   # 저장소 루트에서
    ```
 
    그다음 빌드·기동합니다(단독 또는 master_service). 키를 바꾸면 `docker compose build --no-cache gitolite` 로 다시 빌드합니다.
@@ -248,7 +254,7 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
    ```bash
    D=compose/project_mng_service/gitolite
    cp "$D/.env-example" "$D/.env"
-   cd "$D" && docker compose up -d     # ssh 포트 2222 (변경은 docker-compose.yml 의 ports)
+   cd "$D" && docker compose up -d --build     # ssh 포트 2222 (변경은 docker-compose.yml 의 ports), --build 는 키·Dockerfile 변경 뒤 재빌드
    ```
 
 4. This docker makes 2 accounts, gitolite-creator and git-manager. gitolite is installed at gitolite-creator, and git-manager manages the gitolite system (add users, create repositories). 저장소는 named volume `gitolite-repos` 에 저장됩니다.
@@ -270,7 +276,7 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
 
   1. 웹 스택: Run nginx_http_conf.sh located in config/web-server/nginx/<service>. Create a conf file for each domain under config/web-server/nginx/<service>/conf.d/. Generated filenames always end with "_http".
 
-  2. Start the stack with `docker compose up -d` in its compose folder. This will run the default nginx using http.
+  2. Start the stack with `docker compose up -d --build` in its compose folder (--build rebuilds the images after an upgrade or a Dockerfile / uv.lock change). This will run the default nginx using http.
 
   3. The script/letsencrypt.sh shell script file is linked per volume (`/script`). Run `docker compose exec webserver bash /script/letsencrypt.sh` and enter the domain(s) and email. The ACME webroot is fixed to /www/certbot (every generated conf and proxy sample serves /.well-known/acme-challenge/ from it), so there is no webroot input.
 
