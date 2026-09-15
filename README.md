@@ -333,9 +333,6 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
 <!-- Markdown link & img dfn's -->
 
 [devspoon-web]: https://github.com/devspoons/devspoon-web
-[OpenProject(KR)]: http://wiki.webnori.com/display/pms/Open+Project+7
-[Jenkins(KR)]: https://jjeongil.tistory.com/810
-[Harbor(KR)]: https://engineering.linecorp.com/ko/blog/harbor-for-private-docker-registry/
 [mailgun]: https://www.mailgun.com/
 [sendgrid]: https://sendgrid.com/
 [OpenProject]: https://www.openproject.org/docs/user-guide/wiki/
