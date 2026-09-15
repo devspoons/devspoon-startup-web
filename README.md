@@ -198,6 +198,8 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
    docker compose -f docker-compose-php.yml --profile redis up -d --build      # php 조합
    ```
 
+   > ⚠️ **pgdata 는 비워 두세요**: `compose/master_service/pgdata/` 도 저장소에 없고 첫 기동 시 생성됩니다 — 파일을 넣지 마세요. 자세한 내용은 [OpenProject](#openproject) 의 pgdata 주의를 참고하세요.
+
 ## project_mng_service — 단독 서비스
 
 ### 단독 서비스 동시 기동 규칙
@@ -221,6 +223,9 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
 2. OpenProject 17 필수 env: `SECRET_KEY_BASE`(= `.env` 의 `OPENPROJECT_SECRET_KEY_BASE`), `OPENPROJECT_HOST__NAME`(= `OPENPROJECT_HOST_NAME`, proxy conf 의 `server_name` 과 동일). 메일 발송은 `.env` 의 `EMAIL_DELIVERY_METHOD` · `SMTP_ADDRESS` · `SMTP_PORT` · `SMTP_DOMAIN` · `SMTP_USER_NAME` · `SMTP_PASSWORD` 를 사용하는 SMTP 서비스(예: [sendgrid], [mailgun]) 값으로 바꿉니다.
 
    > ⚠️ **pgdata 업그레이드**: 이미지가 `openproject/openproject:17`(내장 PostgreSQL 17)입니다. 이전 버전(`openproject/community` 등)으로 만든 `pgdata/` 는 PostgreSQL 메이저 버전이 달라 그대로 기동할 수 없습니다. 기존 데이터가 있으면 먼저 백업하고 [OpenProject 공식 문서][OpenProject docs]의 업그레이드 절차를 따르세요.
+
+   > ⚠️ **pgdata 는 비워 두세요**: `pgdata/` 는 저장소에 없고 첫 기동 시 Docker 가 만든 뒤 내장 PostgreSQL 이 초기화합니다. 폴더에 파일이 하나라도 있으면(`.gitkeep` 같은 점 파일 포함) `initdb` 가 `directory ... exists but is not empty` 로 실패해 컨테이너가 재시작을 반복합니다(nginx 502) — 파일을 넣지 마세요.
+   > 생성된 데이터는 컨테이너 postgres 사용자 소유(권한 700)라 호스트 계정으로 읽기·삭제할 수 없습니다. 백업·삭제는 서비스를 멈춘 뒤 컨테이너로 합니다(예: `docker run --rm -v "$PWD/pgdata":/d:ro -v "$PWD":/b alpine tar czf /b/pgdata-backup.tgz -C /d .`).
 
 3. proxy 샘플 복사(저장소 루트): `P=config/web-server/nginx/php/proxy/openproject; cp "$P/openproject_proxy.conf.example" "$P/openproject_proxy.conf"` 후 `server_name` 수정.
 4. 기동(저장소 루트에서, `--build` 는 업그레이드나 Dockerfile 변경 뒤 nginx 이미지 재빌드): `cd compose/project_mng_service/nginx_openproject && docker compose up -d --build` (HTTP 전용 — 위 규칙 참조).
