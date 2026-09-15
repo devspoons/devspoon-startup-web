@@ -103,6 +103,8 @@ docker compose up -d --build             # webserver + gunicorn-app + redis
 docker compose --profile celery up -d    # + celery · celery-beat · flower
 ```
 
+uvicorn · uwsgi · daphne 는 gunicorn 과 같은 명령이며 폴더 이름만 `compose/web_service/nginx_uvicorn` · `nginx_uwsgi` · `nginx_daphne` 로 바꿉니다.
+
 ```bash
 # php (저장소 루트에서)
 cd compose/web_service/nginx_php
@@ -230,11 +232,15 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
    > ```bash
    > D=compose/project_mng_service/nginx_openproject   # master: D=compose/master_service
    > (cd "$D" && docker compose stop openproject)       # master: docker compose -f docker-compose-<stack>.yml stop openproject
-   > docker run --rm --mount type=bind,src="$PWD/$D/pgdata",dst=/d,readonly -v "$HOME":/b alpine \
-   >   sh -c "tar czf /b/openproject-pgdata.tgz -C /d . && chown $(id -u):$(id -g) /b/openproject-pgdata.tgz && chmod 600 /b/openproject-pgdata.tgz"
+   > if [ -d "$D/pgdata" ]; then
+   >   docker run --rm --mount type=bind,src="$PWD/$D/pgdata",dst=/d,readonly -v "$HOME":/b alpine \
+   >     sh -c "test -f /d/PG_VERSION || { echo 'PG_VERSION 없음 — 백업하지 않음' >&2; exit 1; }; tar czf /b/openproject-pgdata.tgz -C /d . && chown $(id -u):$(id -g) /b/openproject-pgdata.tgz && chmod 600 /b/openproject-pgdata.tgz"
+   > else
+   >   echo "$PWD/$D/pgdata 없음 — 저장소 루트에서 실행하세요"
+   > fi
    > ```
    >
-   > `--mount` 는 `pgdata` 가 없으면 오류로 멈춥니다(`-v` 는 빈 폴더를 만들어 빈 백업이 성공한 것처럼 보임). 삭제는 `tar tzf ~/openproject-pgdata.tgz` 로 내용을 확인한 뒤에만 하세요.
+   > 없는 경로를 bind 하면 Docker Desktop 등 일부 엔진은 `--mount` 여도 빈 폴더를 만들고 빈 아카이브가 성공한 것처럼 보입니다. 그래서 호스트에서 `pgdata` 폴더를 먼저 확인하고, 컨테이너 안에서 `PG_VERSION`(PostgreSQL 클러스터 표식)이 있을 때만 아카이브를 만듭니다. 삭제는 `tar tzf ~/openproject-pgdata.tgz` 로 내용을 확인한 뒤에만 하세요.
 
 3. proxy 샘플 복사(저장소 루트): `P=config/web-server/nginx/php/proxy/openproject; cp "$P/openproject_proxy.conf.example" "$P/openproject_proxy.conf"` 후 `server_name` 수정.
 4. 기동(저장소 루트에서, `--build` 는 업그레이드나 Dockerfile 변경 뒤 nginx 이미지 재빌드): `cd compose/project_mng_service/nginx_openproject && docker compose up -d --build` (HTTP 전용 — 위 규칙 참조).
