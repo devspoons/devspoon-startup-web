@@ -225,7 +225,16 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
    > ⚠️ **pgdata 업그레이드**: 이미지가 `openproject/openproject:17`(내장 PostgreSQL 17)입니다. 이전 버전(`openproject/community` 등)으로 만든 `pgdata/` 는 PostgreSQL 메이저 버전이 달라 그대로 기동할 수 없습니다. 기존 데이터가 있으면 먼저 백업하고 [OpenProject 공식 문서][OpenProject docs]의 업그레이드 절차를 따르세요.
 
    > ⚠️ **pgdata 는 비워 두세요**: `pgdata/` 는 저장소에 없고 첫 기동 시 Docker 가 만든 뒤 내장 PostgreSQL 이 초기화합니다. 폴더에 파일이 하나라도 있으면(`.gitkeep` 같은 점 파일 포함) `initdb` 가 `directory ... exists but is not empty` 로 실패해 컨테이너가 재시작을 반복합니다(nginx 502) — 파일을 넣지 마세요.
-   > 생성된 데이터는 컨테이너 postgres 사용자 소유(권한 700)라 호스트 계정으로 읽기·삭제할 수 없습니다. 백업·삭제는 서비스를 멈춘 뒤 컨테이너로 합니다(예: `docker run --rm -v "$PWD/pgdata":/d:ro -v "$PWD":/b alpine tar czf /b/pgdata-backup.tgz -C /d .`).
+   > 생성된 데이터는 컨테이너 postgres 사용자 소유(권한 700)라 호스트 계정으로 읽기·삭제할 수 없습니다. 백업·삭제는 서비스를 멈춘 뒤 컨테이너로 합니다. 백업 예(저장소 루트에서, 결과는 저장소 밖 `$HOME` 에 본인 소유 600 으로 저장 — DB 에 비밀번호 해시가 들어 있음):
+   >
+   > ```bash
+   > D=compose/project_mng_service/nginx_openproject   # master: D=compose/master_service
+   > (cd "$D" && docker compose stop openproject)       # master: docker compose -f docker-compose-<stack>.yml stop openproject
+   > docker run --rm --mount type=bind,src="$PWD/$D/pgdata",dst=/d,readonly -v "$HOME":/b alpine \
+   >   sh -c "tar czf /b/openproject-pgdata.tgz -C /d . && chown $(id -u):$(id -g) /b/openproject-pgdata.tgz && chmod 600 /b/openproject-pgdata.tgz"
+   > ```
+   >
+   > `--mount` 는 `pgdata` 가 없으면 오류로 멈춥니다(`-v` 는 빈 폴더를 만들어 빈 백업이 성공한 것처럼 보임). 삭제는 `tar tzf ~/openproject-pgdata.tgz` 로 내용을 확인한 뒤에만 하세요.
 
 3. proxy 샘플 복사(저장소 루트): `P=config/web-server/nginx/php/proxy/openproject; cp "$P/openproject_proxy.conf.example" "$P/openproject_proxy.conf"` 후 `server_name` 수정.
 4. 기동(저장소 루트에서, `--build` 는 업그레이드나 Dockerfile 변경 뒤 nginx 이미지 재빌드): `cd compose/project_mng_service/nginx_openproject && docker compose up -d --build` (HTTP 전용 — 위 규칙 참조).
@@ -250,7 +259,7 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
    cp ~/.ssh/gitolite_admin.pub docker/gitolite/system/client_user.pub   # 저장소 루트에서
    ```
 
-   그다음 빌드·기동합니다(단독 또는 master_service). 키를 바꾸면 `docker compose build --no-cache gitolite` 로 다시 빌드합니다.
+   그다음 빌드·기동합니다(단독 또는 master_service). 키를 바꾸면 `docker compose build --no-cache gitolite` 로 다시 빌드합니다(master_service 는 `-f docker-compose-<stack>.yml` 을 붙임).
 
 2. > ⚠️ **gitolite 이미지는 레지스트리에 푸시 금지(로컬 빌드 전용).** 관리자 공개키가 이미지에 구워지므로 이미지를 공유하면 키 구성이 노출되고, 받은 쪽이 같은 관리자 키 구성을 그대로 쓰게 됩니다.
 
@@ -278,6 +287,7 @@ docker compose restart      # 기동 명령이 다시 돌며 이관한 DB 에 �
 ## Setting up HTTPS on a web server
 
 - This step requires running http nginx server
+- master_service 는 compose 폴더에 `docker-compose.yml` 이 없으므로 아래 모든 `docker compose` 명령에 `-f docker-compose-<stack>.yml` 을 붙입니다(예: `docker compose -f docker-compose-gunicorn.yml exec webserver bash /script/letsencrypt.sh`).
 
   1. 웹 스택: Run nginx_http_conf.sh located in config/web-server/nginx/<service>. Create a conf file for each domain under config/web-server/nginx/<service>/conf.d/. Generated filenames always end with "_http".
 
