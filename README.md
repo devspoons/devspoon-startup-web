@@ -31,7 +31,7 @@ Plane · Jenkins · Gitea 셋은 한 nginx 뒤에 **함께** 띄울 수도 있�
 
 - **User custom installation support** : You can selectively install only the desired solution at `compose/project_mng_service/<solution>` without having to install all the solutions. Run only one standalone service at a time (see [단독 서비스 동시 기동 규칙](#단독-서비스-동시-기동-규칙)).
 
-- **All-in-one combinations** : To run a web stack together with Plane, Jenkins and Gitea, use one of the five files in `compose/master_service/` (see [master_service](#master_service--전체-구축-웹-스택--plane--jenkins--gitea)).
+- **All-in-one combinations** : To run a web stack together with Plane, Jenkins and Gitea, use one of the five files in `compose/master_service/` (see [통합 서비스 기동](#통합-서비스-기동--master_service-compose-파일-하나로-전부)).
 
 - **Access web server and project management solutions with one nginx through nginx proxy** : In master_service, one nginx serves the web app and reverse-proxies Plane, Jenkins and Gitea by domain.
 
@@ -237,49 +237,117 @@ Harbor 는 자체 installer 로 설치하며 두 방식 어디에도 포함되�
   git.test.com    →  Gitea   (+ ssh://…:2222 로 git clone)
 ```
 
-## master_service — 전체 구축 (웹 스택 + Plane · Jenkins · Gitea)
+## 통합 서비스 기동 — master_service (compose 파일 하나로 전부)
 
-`compose/master_service/` 의 5조합은 한 nginx(`webserver`) 뒤에 웹 스택과 Plane · Jenkins · Gitea 를 함께 띄웁니다. `.env` 하나(`compose/master_service/.env-example`)를 공유하고, Plane · Gitea 서비스 정의는 단독 스택과 같은 `compose/common/{plane-services,gitea-service}.yml` 을 `include:` 합니다(**Docker Compose ≥ 2.20**).
+`compose/master_service/` 의 compose 파일 **하나**를 실행하면 웹 스택 · Plane · Jenkins · Gitea 가 한 번에 뜨고, nginx 하나가 도메인별로 갈라 보냅니다. 서비스마다 따로 기동할 필요가 없습니다.
 
-| 파일 | 웹 스택 | 프로파일 |
+### 어떤 파일을 고르는가
+
+웹 스택 종류만 다르고 Plane · Jenkins · Gitea 는 **다섯 파일 모두에 들어 있습니다.** 하나만 고르세요.
+
+| 파일 | 웹 스택 | 붙일 프로파일 |
 |---|---|---|
-| `docker-compose-gunicorn.yml` | gunicorn | `celery` |
-| `docker-compose-uvicorn.yml` | uvicorn | `celery` |
-| `docker-compose-uwsgi.yml` | uwsgi | `celery` |
-| `docker-compose-daphne.yml` | daphne | `celery` |
-| `docker-compose-php.yml` | php 8.4 | `redis` (celery 없음) |
+| `docker-compose-gunicorn.yml` | gunicorn | `--profile celery` |
+| `docker-compose-uvicorn.yml` | uvicorn | `--profile celery` |
+| `docker-compose-uwsgi.yml` | uwsgi | `--profile celery` |
+| `docker-compose-daphne.yml` | daphne | `--profile celery` |
+| `docker-compose-php.yml` | php 8.4 | `--profile redis` (celery 없음) |
 
-모든 조합에 **Plane**(`makeplane/plane-*`, 앱·DB·큐·오브젝트 저장소·내부 프록시 13 서비스) · `jenkins`(`jenkins/jenkins:lts-jdk21`) · **Gitea**(`gitea/gitea`, 호스트 2222 = git over SSH) 가 포함됩니다.
+한 파일이 띄우는 것 — php 조합 기준 **컨테이너 17개**:
 
-1. **Plane · Gitea 는 사전 준비가 없습니다** — 관리자 계정은 기동 뒤에 만듭니다([Plane](#plane) 6 · [Gitea](#gitea) 4단계).
-2. **`.env` 생성** — Plane 비밀 키 5종도 헬퍼가 생성합니다(`include:` 한 `compose/common/plane-services.yml` 의 `${KEY:?}` 까지 훑습니다).
+| 묶음 | 컨테이너 |
+|---|---|
+| 웹 | `nginx-webserver` · `php-app`(또는 `<stack>-app`) · `redis_db` |
+| Plane | `plane-db` · `plane-redis` · `plane-mq` · `plane-minio` · `plane-migrator`(1회성) · `plane-api` · `plane-worker` · `plane-beat-worker` · `plane-web` · `plane-space` · `plane-admin` · `plane-live` · `plane-proxy` |
+| Jenkins | `jenkins`( + 1회성 `jenkins-init`) |
+| Gitea | `gitea` |
 
-   ```bash
-   D=compose/master_service
-   cp "$D/.env-example" "$D/.env"
-   bash -c ". script/lib/django_secrets.sh && ensure_env_secrets $D/.env"
-   ```
+Plane · Gitea 정의는 단독 스택과 **같은 파일**(`compose/common/{plane-services,gitea-service}.yml`)을 `include:` 로 가져옵니다 — **Docker Compose ≥ 2.20** 이 필요합니다.
 
-   이어서 `PLANE_DOMAIN` · `PLANE_WEB_URL` · `PLANE_CORS_ALLOWED_ORIGINS` · `GITEA_DOMAIN` · `GITEA_ROOT_URL` · `FLOWER_ID` 자리표시자를 직접 입력합니다.
-3. **proxy 샘플 복사** — webserver 가 `config/web-server/nginx/php/proxy/<svc>/` 를 `/etc/nginx/proxy.d/<svc>/` 로 읽기 전용 마운트하고, `nginx.conf` 가 `include /etc/nginx/proxy.d/*/*.conf;` 로 읽습니다. `conf.d` 로 복사하지 않습니다.
+### 기동 절차
 
-   ```bash
-   P=config/web-server/nginx/php/proxy
-   cp "$P/plane/plane_proxy.conf.example" "$P/plane/plane_proxy.conf"                           # server_name 수정
-   cp "$P/gitea/gitea_proxy.conf.example" "$P/gitea/gitea_proxy.conf"                           # server_name 수정
-   cp "$P/jenkins/jenkins_proxy.conf.example" "$P/jenkins/jenkins_proxy.conf"                   # server_name 수정
-   ```
+아래 명령은 전부 **저장소 루트**에서 시작합니다. 사전 준비는 없습니다 — Plane · Gitea 관리자 계정은 기동한 뒤에 만듭니다.
 
-   복사본(`*_proxy.conf`, gitignore)이 없으면 주석뿐인 `default.conf` 만 읽혀 해당 proxy 가 비활성입니다. 샘플은 HTTP(80) 서버 블록만 있으므로 TLS 는 [HTTPS 절](#setting-up-https-on-a-web-server)로 443 블록을 추가합니다.
-4. **기동** — 저장소 루트에서 스택 폴더로 이동합니다(`--build` 는 업그레이드나 Dockerfile / `uv.lock` 변경 뒤 이미지를 다시 빌드합니다).
+**1. `.env` 만들고 비밀값 채우기**
 
-   ```bash
-   cd compose/master_service
-   docker compose -f docker-compose-gunicorn.yml --profile celery up -d --build
-   docker compose -f docker-compose-php.yml --profile redis up -d --build      # php 조합
-   ```
+```bash
+D=compose/master_service
+cp "$D/.env-example" "$D/.env"
+bash -c ". script/lib/django_secrets.sh && ensure_env_secrets $D/.env"
+```
 
-   > ⚠️ **첫 기동은 Plane 마이그레이션 때문에 수 분 걸립니다**: `plane-migrator` 가 성공으로 끝난 뒤 `plane-api` 가 뜨고, 그 뒤에 `plane-proxy` 가 준비됩니다. Plane · Gitea 데이터는 named volume 이므로 호스트 폴더를 만들 필요가 없습니다(`docker compose down -v` 는 그 볼륨을 지웁니다).
+헬퍼가 `include:` 한 정의까지 훑어 Plane 비밀 키 5종과 `REDIS_PASSWORD` · `DJANGO_SECRET_KEY` 등을 채웁니다.
+
+**2. 자리표시자 직접 입력** — 헬퍼가 채우지 않는 값입니다. `compose/master_service/.env` 를 열어 실제 도메인으로 바꾸세요.
+
+| 키 | 값 | 비고 |
+|---|---|---|
+| `DJANGO_ALLOWED_HOSTS` | 웹 앱 도메인 추가 | 예: `localhost,127.0.0.1,web.example.com` |
+| `PLANE_DOMAIN` · `PLANE_WEB_URL` · `PLANE_CORS_ALLOWED_ORIGINS` | Plane 도메인 (셋 다 같은 값) | `WEB_URL` · `CORS` 는 `http://` 포함 |
+| `GITEA_DOMAIN` · `GITEA_ROOT_URL` | Gitea 도메인 | `ROOT_URL` 은 끝에 `/` 포함한 전체 URL |
+| `FLOWER_ID` | flower 로그인 ID | Python 스택만 해당 |
+
+**3. 웹 앱 도메인 conf 생성** — 웹 스택은 도메인별 conf 를 생성기로 만듭니다. 이 단계를 건너뛰면 저장소에 딸린 `localhost` conf 만 있어서, 웹 앱 도메인으로 들어온 요청은 catch-all 에 걸려 **444** 로 끊깁니다.
+
+```bash
+# php 조합 예 — 웹루트 php_sample, 백엔드 php-app:9000
+bash config/web-server/nginx/php/nginx_http_conf.sh -w php_sample -p 80 -d web.example.com -a php-app -s 9000
+```
+
+Python 조합은 스택 폴더와 인자가 다릅니다(예: gunicorn → `config/web-server/nginx/gunicorn/nginx_http_conf.sh -w django_sample -p 80 -d <도메인> -a gunicorn-app -s 8000`). 옵션은 `-h` 로 확인하세요.
+
+**4. proxy conf 3종 복사** — Plane · Jenkins · Gitea 용입니다. 복사본을 만들지 않으면 그 서비스만 비활성이고 나머지는 정상 기동합니다.
+
+```bash
+P=config/web-server/nginx/php/proxy
+cp "$P/plane/plane_proxy.conf.example"     "$P/plane/plane_proxy.conf"       # server_name 을 Plane 도메인으로
+cp "$P/jenkins/jenkins_proxy.conf.example" "$P/jenkins/jenkins_proxy.conf"   # server_name 을 Jenkins 도메인으로
+cp "$P/gitea/gitea_proxy.conf.example"     "$P/gitea/gitea_proxy.conf"       # server_name 을 Gitea 도메인으로
+```
+
+webserver 는 이 폴더를 `/etc/nginx/proxy.d/<svc>/` 로 읽기 전용 마운트하고, `nginx.conf` 가 `include /etc/nginx/proxy.d/*/*.conf;` 로 읽습니다. **`conf.d` 로 복사하지 마세요.** 샘플에는 HTTP(80) 서버 블록만 있습니다 — TLS 는 [HTTPS 절](#setting-up-https-on-a-web-server)에서 443 블록을 더합니다.
+
+**5. 기동** — compose 파일 하나로 전부 올립니다.
+
+```bash
+cd compose/master_service
+docker compose -f docker-compose-php.yml --profile redis up -d --build          # php 조합
+# 또는
+docker compose -f docker-compose-gunicorn.yml --profile celery up -d --build    # gunicorn 조합
+```
+
+`--build` 는 웹 스택 이미지(nginx · app)를 다시 만듭니다. 업그레이드나 Dockerfile · `uv.lock` 변경 뒤에 붙이세요. Plane · Jenkins · Gitea 는 공개 이미지를 받아 쓰므로 빌드하지 않습니다.
+
+> ⚠️ **첫 기동은 수 분 걸립니다.** `plane-migrator` 가 DB 마이그레이션을 끝내야 `plane-api` 가 뜨고, 그 뒤에 `plane-proxy` 가 준비됩니다. `--wait` 를 붙이면 전부 준비될 때까지 기다립니다(`--wait --wait-timeout 900`).
+
+**6. 확인**
+
+```bash
+docker compose -f docker-compose-php.yml --profile redis ps          # 컨테이너 상태
+docker compose -f docker-compose-php.yml exec webserver nginx -t     # proxy.d 포함 설정 검사
+```
+
+**7. 서비스별 첫 설정** — 기동이 끝난 뒤에 합니다.
+
+| 서비스 | 할 일 |
+|---|---|
+| Plane | 브라우저로 접속해 가입 → 첫 사용자가 됩니다. 인스턴스 설정은 `/god-mode/` ([Plane](#plane) 참고) |
+| Jenkins | `docker compose -f docker-compose-php.yml exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword` 로 초기 비밀번호 확인 |
+| Gitea | `docker compose -f docker-compose-php.yml exec -u git gitea gitea admin user create --username <id> --password '<pw>' --email <mail> --admin` |
+
+### 운영 명령
+
+`-f docker-compose-<stack>.yml` 과 기동할 때 쓴 프로파일을 항상 같이 붙입니다.
+
+| 목적 | 명령 |
+|---|---|
+| conf 만 반영 | `docker compose -f … exec webserver nginx -t && … exec webserver nginx -s reload` |
+| nginx 만 재시작 | `docker compose -f … restart webserver` |
+| 전체 재기동 | `docker compose -f … --profile redis stop` → `… start` |
+| 전체 정지 | `docker compose -f … --profile redis stop` |
+
+> ⚠️ 전체 `docker compose restart` 는 피하세요. 모두 동시에 재시작하면서 app 이 내려간 순간 nginx 가 먼저 떠 `[emerg] host not found in upstream` 으로 한 번 죽을 수 있습니다.
+> ⚠️ `docker compose down -v` 는 Plane 데이터와 Gitea 저장소를 **삭제**합니다.
 
 ## project_mng_service — 단독 구축
 
@@ -303,9 +371,40 @@ Harbor 는 자체 installer 로 설치하며 두 방식 어디에도 포함되�
 
 #### 서비스 설명
 
-이슈 트래킹과 스프린트 관리를 하는 오픈소스 프로젝트 관리 도구입니다(Jira 계열). 워크스페이스 아래 프로젝트를 만들고, 이슈를 **사이클**(반복 주기)과 **모듈**(기능 묶음)로 나눠 관리합니다. 보드·리스트·캘린더·간트 뷰를 제공하고 여러 사람이 같은 문서를 동시에 편집할 수 있습니다.
+**한 줄 요약**: 이슈로 일을 쪼개고 주기로 묶어 굴리는 오픈소스 프로젝트 관리 도구입니다. Jira · Linear 와 같은 부류이며, 직접 설치해 쓰는 self-hosted 방식입니다.
 
-인스턴스 전체 설정(가입 허용 여부, 인증 방식, 메일)은 **God Mode** 라는 별도 관리 화면에서 합니다.
+**개념 구조** — 위에서 아래로 포개집니다.
+
+| 개념 | 설명 |
+|---|---|
+| 인스턴스 | 설치한 Plane 전체. 가입 정책 · 인증 · 메일을 **God Mode**(`/god-mode/`)에서 정합니다 |
+| 워크스페이스 | 회사 · 팀 단위 공간. 멤버와 권한이 여기에 붙습니다 |
+| 프로젝트 | 워크스페이스 안의 작업 단위. 고유 식별자(예: `LIVE`)를 가집니다 |
+| 이슈 | 실제 할 일. 상태 · 담당자 · 우선순위 · 라벨 · 마감일을 가집니다 |
+| 사이클(Cycle) | 기간으로 묶은 이슈 모음 — 스프린트에 해당합니다 |
+| 모듈(Module) | 기능 · 목표로 묶은 이슈 모음 — 기간과 무관합니다 |
+
+**주요 기능**
+
+| 기능 | 설명 |
+|---|---|
+| 다중 뷰 | 같은 이슈 목록을 보드(칸반) · 리스트 · 캘린더 · 간트 · 스프레드시트로 전환해 봅니다 |
+| 사이클 · 모듈 | 스프린트 운영과 기능 단위 묶음을 따로 관리하고, 번다운 차트로 진행률을 봅니다 |
+| 페이지 | 프로젝트에 딸린 문서. **여러 명이 동시에 편집**합니다(`plane-live` 가 담당) |
+| 공개 공유 | 이슈 목록이나 페이지를 외부에 읽기 전용으로 공개합니다(`plane-space` 가 담당) |
+| 첨부 · 이미지 | S3 호환 저장소(`plane-minio`)에 보관합니다 |
+| API | REST API 로 워크스페이스 · 프로젝트 · 이슈를 생성 · 조회합니다 |
+| God Mode | 인스턴스 관리자 화면 — 가입 허용, 인증 수단(비밀번호 · 매직링크 · OAuth), SMTP, 파일 크기 제한 |
+
+**이럴 때 씁니다**
+
+- 이슈 · 스프린트 관리를 SaaS 가 아니라 **사내 서버에** 두고 싶을 때
+- Jenkins · Gitea 와 같은 도메인 아래 묶어 한 곳에서 운영하고 싶을 때
+
+**알아 둘 점**
+
+- 컨테이너 13개가 한 묶음이라 이 저장소의 서비스 중 가장 무겁습니다. 첫 기동에 수 분 걸립니다.
+- 메일 발송(초대 · 알림)은 기본값이 꺼져 있습니다. 쓰려면 God Mode 에서 SMTP 를 설정하세요.
 
 #### 구성
 
@@ -353,7 +452,7 @@ Harbor 는 자체 installer 로 설치하며 두 방식 어디에도 포함되�
 
    ```bash
    cd compose/project_mng_service/nginx_plane
-   docker compose up -d
+   docker compose up -d --build
    ```
 
    첫 기동은 **수 분** 걸립니다. `plane-migrator` 가 DB 마이그레이션을 끝내야 `plane-api` 가 뜨고, 그 뒤에 나머지가 준비됩니다.
@@ -381,7 +480,39 @@ Harbor 는 자체 installer 로 설치하며 두 방식 어디에도 포함되�
 
 #### 서비스 설명
 
-빌드·테스트·배포를 자동화하는 CI 서버입니다. 코드가 올라올 때마다 정해 둔 작업(Job/Pipeline)을 자동 실행해, 여러 사람이 동시에 개발할 때 생기는 문제를 빨리 찾아냅니다. 플러그인으로 기능을 확장합니다.
+**한 줄 요약**: 정해 둔 작업을 자동으로 실행해 주는 CI/CD 서버입니다. "코드가 올라오면 빌드하고 테스트하고 배포한다" 를 사람 손 없이 반복합니다.
+
+**개념 구조**
+
+| 개념 | 설명 |
+|---|---|
+| Job / Pipeline | 실행할 작업의 정의. 요즘은 저장소의 `Jenkinsfile` 에 파이프라인을 적는 방식을 씁니다 |
+| Build | Job 을 한 번 실행한 결과. 번호 · 로그 · 산출물(artifact)이 남습니다 |
+| Trigger | 실행 조건 — git push 웹훅, 주기 실행(cron), 수동 실행, 다른 Job 성공 시 |
+| Agent / Node | 실제로 작업을 돌리는 실행기. 기본은 Jenkins 자신(built-in node)입니다 |
+| Credentials | 저장소 접근 키 · 레지스트리 비밀번호 등을 암호화해 보관하고 Job 에 주입합니다 |
+| Plugin | 기능 확장. Git · Docker · Slack 연동 등 대부분의 기능이 플러그인입니다 |
+
+**주요 기능**
+
+| 기능 | 설명 |
+|---|---|
+| 자동 빌드·테스트 | push 마다 빌드·테스트를 돌려 깨진 커밋을 바로 찾아냅니다 |
+| 파이프라인 | 빌드 → 테스트 → 이미지 생성 → 배포를 단계로 나눠 실행하고, 단계별 성공·실패를 봅니다 |
+| 병렬 · 분산 실행 | 여러 에이전트에 작업을 나눠 돌립니다 |
+| 산출물 보관 | 빌드 결과물과 테스트 리포트를 빌드 번호별로 남깁니다 |
+| 알림 | 실패 시 메일 · Slack 등으로 알립니다(플러그인) |
+
+**이 저장소와 묶어 쓰는 그림**
+
+```
+Gitea 에 push  →  웹훅  →  Jenkins 빌드·테스트  →  Harbor 에 이미지 push
+```
+
+**알아 둘 점**
+
+- 설치 직후에는 플러그인이 거의 없습니다. 첫 로그인 뒤 마법사에서 권장 플러그인을 설치하세요.
+- 데이터가 전부 `jenkins_home` 한 폴더에 쌓입니다(설정 · Job · 빌드 기록 · 플러그인). 백업 대상은 이 폴더입니다.
 
 #### 구성
 
@@ -431,7 +562,41 @@ Harbor 는 자체 installer 로 설치하며 두 방식 어디에도 포함되�
 
 #### 서비스 설명
 
-직접 호스팅하는 가벼운 Git 서비스입니다. 저장소 관리, 웹 UI, 이슈, 풀 리퀘스트, 조직·권한 관리를 제공하고 SSH 와 HTTP 양쪽으로 clone·push 를 받습니다. GitHub 을 쓰지 않고 사내에 코드를 두고 싶을 때 씁니다.
+**한 줄 요약**: 사내에 두는 GitHub 입니다. 저장소 호스팅에 웹 UI · 이슈 · 풀 리퀘스트 · 권한 관리가 딸려 오고, 컨테이너 하나로 돕니다.
+
+**개념 구조**
+
+| 개념 | 설명 |
+|---|---|
+| 사용자 · 조직 | 저장소 소유자. 조직 아래 팀을 만들고 팀 단위로 권한을 줍니다 |
+| 저장소 | git 저장소 + 이슈 · PR · 위키 · 릴리스 |
+| 풀 리퀘스트 | 브랜치 병합 요청. 리뷰 · 승인 · 병합 방식(merge · squash · rebase)을 정합니다 |
+| 웹훅 | 이벤트(push · PR 등)를 외부로 알립니다 — **Jenkins 자동 빌드 연동이 여기서 나옵니다** |
+| 접근 방식 | **SSH**(공개키 등록 후 `ssh://git@<도메인>:2222/…`) 와 **HTTP**(비밀번호 · 토큰) 둘 다 |
+
+**주요 기능**
+
+| 기능 | 설명 |
+|---|---|
+| 저장소 호스팅 | private · public, 조직/팀 권한, 브랜치 보호 규칙 |
+| 이슈 · PR | 라벨 · 마일스톤 · 리뷰 · 코드 코멘트 |
+| 웹훅 · API | push 시 CI 트리거, REST API 로 저장소 · 사용자 · 이슈 관리 |
+| 미러링 | 외부 저장소를 주기적으로 끌어오거나 내보냅니다 |
+| 릴리스 | 태그에 바이너리를 붙여 배포합니다 |
+| Actions | GitHub Actions 호환 CI (별도 runner 필요 — 이 저장소 구성에는 포함하지 않았습니다) |
+
+**GitHub · GitLab 과 비교**
+
+| | Gitea |
+|---|---|
+| 무게 | 컨테이너 1개, 메모리 수백 MB — GitLab 보다 훨씬 가볍습니다 |
+| DB | 기본 내장 SQLite. 규모가 커지면 PostgreSQL 등 외부 DB 로 바꿉니다 |
+| 범위 | 저장소 · 이슈 · PR 중심. CI 는 Jenkins 같은 별도 도구와 묶는 구성이 이 저장소의 기본입니다 |
+
+**알아 둘 점**
+
+- 기본값이 **가입 차단**(`GITEA_DISABLE_REGISTRATION=true`)입니다. 계정은 관리자가 만듭니다.
+- git over SSH 는 호스트 `2222` 를 씁니다. 클라우드면 보안 그룹에도 열어야 합니다.
 
 #### 구성
 
@@ -467,7 +632,7 @@ Harbor 는 자체 installer 로 설치하며 두 방식 어디에도 포함되�
 
    ```bash
    cd compose/project_mng_service/gitea
-   docker compose up -d
+   docker compose up -d --build
    ```
 
 4. **관리자 계정 생성** (최초 1회)
@@ -505,7 +670,39 @@ Harbor 는 자체 installer 로 설치하며 두 방식 어디에도 포함되�
 
 #### 서비스 설명
 
-사내에 두는 Private Docker Registry 입니다. 이미지를 외부 레지스트리에 올리지 않고 직접 보관·배포하며, 프로젝트 단위 접근 권한, 이미지 취약점 스캔, 서명, 복제(replication)를 제공합니다.
+**한 줄 요약**: 사내에 두는 Docker Hub 입니다. 컨테이너 이미지를 외부에 올리지 않고 직접 보관·배포하며, 권한 · 스캔 · 서명 같은 기업용 기능이 붙습니다.
+
+**개념 구조**
+
+| 개념 | 설명 |
+|---|---|
+| 프로젝트 | 이미지를 담는 단위. public / private 를 정하고 멤버에게 역할(개발자 · 마스터 · 게스트)을 줍니다 |
+| 리포지터리 · 태그 | `<harbor 도메인>/<프로젝트>/<이미지>:<태그>` 형태로 push · pull 합니다 |
+| 로봇 계정 | CI 가 쓰는 전용 자격증명. 사람 계정과 분리하고 권한을 좁힙니다 |
+| 복제(Replication) | 다른 레지스트리(Docker Hub · 다른 Harbor)와 이미지를 주기적으로 동기화합니다 |
+| 보존 · GC | 오래된 태그를 규칙으로 지우고, 참조 없는 레이어를 정리해 디스크를 회수합니다 |
+
+**주요 기능**
+
+| 기능 | 설명 |
+|---|---|
+| 접근 제어 | 프로젝트 단위 권한, LDAP · OIDC 연동 |
+| 취약점 스캔 | push 된 이미지의 CVE 를 검사하고, 심각도 기준으로 pull 을 막을 수 있습니다 |
+| 이미지 서명 | 서명된 이미지만 배포되도록 강제합니다 |
+| 감사 로그 | 누가 무엇을 push · pull · 삭제했는지 남깁니다 |
+| 차트 · 아티팩트 | 컨테이너 이미지 외 Helm 차트 등 OCI 아티팩트도 보관합니다 |
+
+**이 저장소와 묶어 쓰는 그림**
+
+```
+Jenkins 빌드  →  docker push <harbor 도메인>/<프로젝트>/<앱>:<태그>  →  운영 서버에서 pull
+```
+
+**알아 둘 점**
+
+- 설치 방식이 다른 세 서비스와 **완전히 다릅니다** — compose 정의가 아니라 Harbor 공식 installer 를 씁니다(아래 [구성](#구성-3) 참고).
+- 자체 nginx 로 80 포트를 잡으므로 **다른 서비스와 같은 호스트에 두지 않는 편이 좋습니다.**
+- `harbor.yml` 의 `hostname` 에는 **루프백 IP(`127.0.0.1`)를 쓸 수 없습니다.** Harbor 자체 검증이 `127.0.0.1 can not be the hostname` 으로 설치를 거부합니다 — 도메인이나 실제 IP 를 쓰세요.
 
 #### 구성
 
